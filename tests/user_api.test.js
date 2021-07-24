@@ -10,7 +10,7 @@ const baseUrl = '/api/users'
 beforeEach(async () => {
     await User.deleteMany({})
     const passwordHash = await bcrypt.hash('sekret', 10)
-    const user = new User({ username: 'root', name: 'root root', passwordHash })
+    const user = new User({username: 'root', name: 'root root', passwordHash})
     await user.save()
 })
 
@@ -46,7 +46,9 @@ describe('adding user tests', () => {
 
         expect(usersAfterAdding).toHaveLength(usersInDb.length + 1)
     })
+})
 
+describe('validation of adding users', () => {
     test('error while adding existing user', async () => {
         const usersInDb = await helper.usersInDb()
         const newUser = {
@@ -61,6 +63,62 @@ describe('adding user tests', () => {
             .expect('Content-Type', /application\/json/)
 
         expect(result.body.error).toContain('`username` to be unique')
+
+        const usersAfterAdding = await helper.usersInDb()
+        expect(usersAfterAdding).toHaveLength(usersInDb.length)
+    })
+
+    test('error while adding invalid username', async () => {
+        const usersInDb = await helper.usersInDb()
+        const newUser = {
+            username: 'ad',
+            name: 'Nikita',
+            password: 'q123'
+        }
+
+        const result = await api.post(baseUrl)
+            .send(newUser)
+            .expect(400)
+            .expect('Content-Type', /application\/json/)
+
+        expect(result.body.error).toContain(`\`username\` (\`${newUser.username}\`) is shorter than the minimum`)
+
+        const usersAfterAdding = await helper.usersInDb()
+        expect(usersAfterAdding).toHaveLength(usersInDb.length)
+    })
+
+    test('error while adding invalid password', async () => {
+        const usersInDb = await helper.usersInDb()
+        const newUser = {
+            username: 'admin',
+            name: 'Nikita',
+            password: 'q1'
+        }
+
+        const result = await api.post(baseUrl)
+            .send(newUser)
+            .expect(404)
+            .expect('Content-Type', /application\/json/)
+
+        expect(result.body.error).toContain(`password is missing or length is less than 3`)
+
+        const usersAfterAdding = await helper.usersInDb()
+        expect(usersAfterAdding).toHaveLength(usersInDb.length)
+    })
+
+    test('error while adding without username', async () => {
+        const usersInDb = await helper.usersInDb()
+        const newUser = {
+            name: 'Nikita',
+            password: 'q11'
+        }
+
+        const result = await api.post(baseUrl)
+            .send(newUser)
+            .expect(400)
+            .expect('Content-Type', /application\/json/)
+
+        expect(result.body.error).toContain('Path `username` is required')
 
         const usersAfterAdding = await helper.usersInDb()
         expect(usersAfterAdding).toHaveLength(usersInDb.length)
