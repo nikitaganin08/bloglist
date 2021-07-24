@@ -14,71 +14,103 @@ beforeEach(async () => {
     await Promise.all(promiseArray)
 })
 
-test('blogs are returned as json', async () => {
-    await api.get(baseUrl)
-        .expect(200)
-        .expect('Content-Type', /application\/json/)
+describe('when there is initially blogs saved', () => {
+    test('blogs are returned as json', async () => {
+        await api.get(baseUrl)
+            .expect(200)
+            .expect('Content-Type', /application\/json/)
+    })
+
+    test('all blogs returned ', async () => {
+        const response = await api.get(baseUrl)
+
+        expect(response.body).toHaveLength(blogHelper.initialBlogs.length)
+    })
+
+    test('specific blog was returned', async () => {
+        const response = await api.get(baseUrl)
+        const titles = response.body.map(blog => blog.title)
+
+        expect(titles).toContain('Journey')
+    })
+
+    test('property of _id renamed to id', async () => {
+        const response = await api.get(baseUrl)
+            .expect(200)
+        expect(response.body[0].id).toBeDefined()
+        expect(response.body[0]._id).not.toBeDefined()
+    })
 })
 
-test('all blogs returned ', async () => {
-    const response = await api.get(baseUrl)
-        .expect(200)
-    expect(response.body).toHaveLength(blogHelper.initialBlogs.length)
+describe('addition of a new blog', () => {
+    test('add valid blog', async () => {
+        const newBlog = {
+            title: 'New blog',
+            author: 'Adam Wome',
+            url: 'livejournal.ru/newblog',
+            likes: 0
+        }
+
+        await api.post(baseUrl)
+            .send(newBlog)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
+
+        const blogs = await blogHelper.blogsInDb()
+        expect(blogs).toHaveLength(blogHelper.initialBlogs.length + 1)
+
+        const blogsTitle = blogs.map(blog => blog.title)
+        expect(blogsTitle).toContain(newBlog.title)
+    })
+
+    test('cannot add valid blog', async () => {
+        const newBLog = {
+            title: 'New',
+            url: 'google.com/new'
+        }
+
+        await api.post(baseUrl)
+            .send(newBLog)
+            .expect(400)
+
+        const blogs = await blogHelper.blogsInDb()
+        expect(blogs).toHaveLength(blogHelper.initialBlogs.length)
+    })
+
+    test('missing likes set to \'zero\' on addition', async () => {
+        const newBLog = {
+            title: 'New',
+            author: 'John New',
+            url: 'google.com/new',
+        }
+
+        const response = await api.post(baseUrl)
+            .send(newBLog)
+            .expect(201)
+
+        expect(response.body.likes).toEqual(0)
+    })
 })
 
-test('add valid blog', async () => {
-    const newBlog = {
-        title: 'New blog',
-        author: 'Adam Wome',
-        url: 'livejournal.ru/newblog',
-        likes: 0
-    }
+describe('deletion on the blog', () => {
+    test('succeeds with status 204 if id is valid', async () => {
+        const blogs = await blogHelper.blogsInDb()
+        const blogToDelete = blogs[0]
 
-    await api.post(baseUrl)
-        .send(newBlog)
-        .expect(201)
-        .expect('Content-Type', /application\/json/)
+        await api.delete(`${baseUrl}/${blogToDelete.id}`)
+            .expect(204)
+        const blogsAfterDelete = await blogHelper.blogsInDb()
 
-    const blogs = await blogHelper.blogsInDb()
-    expect(blogs).toHaveLength(blogHelper.initialBlogs.length + 1)
+        expect(blogsAfterDelete).toHaveLength(blogHelper.initialBlogs.length - 1)
+    })
 
-    const blogsTitle = blogs.map(blog => blog.title)
-    expect(blogsTitle).toContain(newBlog.title)
-})
+    test('error with status 400 if id is not valid', async () => {
+        await api.delete(`${baseUrl}/5a3d5da59070081a82a3445`)
+            .expect(400)
+        const blogsAfterDelete = await blogHelper.blogsInDb()
 
-test('cannot add valid blog', async () => {
-    const newBLog = {
-        title: 'New',
-        url: 'google.com/new'
-    }
-
-    await api.post(baseUrl)
-        .send(newBLog)
-        .expect(400)
-
-    const blogs = await blogHelper.blogsInDb()
-    expect(blogs).toHaveLength(blogHelper.initialBlogs.length)
-})
-
-test('property named id', async () => {
-    const response = await api.get(baseUrl)
-        .expect(200)
-    expect(response.body[0].id).toBeDefined()
-    expect(response.body[0]._id).not.toBeDefined()
-})
-
-test('missing likes set to 9', async () => {
-    const newBLog = {
-        title: 'New',
-        author: 'John New',
-        url: 'google.com/new',
-    }
-
-    const response = await api.post(baseUrl)
-        .send(newBLog)
-        .expect(201)
-
-    expect(response.body.likes).toEqual(0)
+        expect(blogsAfterDelete).toHaveLength(blogHelper.initialBlogs.length)
+    })
 })
 
 afterAll(() => mongoose.connection.close())
