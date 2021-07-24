@@ -113,4 +113,26 @@ describe('deletion on the blog', () => {
     })
 })
 
+describe('updating of blog', () => {
+    test('succeeds with valid id', async () => {
+        const blogs = await blogHelper.blogsInDb()
+        const blogToUpdate = { ...blogs[0], title: 'Updated title' }
+
+        const response = await api.put(`${baseUrl}/${blogToUpdate.id}`)
+            .send(blogToUpdate)
+            .expect(200)
+
+        expect(response.body.title).toEqual(blogToUpdate.title)
+    })
+    test('error with not valid id', async () => {
+        const blogs = await blogHelper.blogsInDb()
+        const blogToUpdate = { ...blogs[0], title: 'Updated title' }
+
+        await api.put(`${baseUrl}/5a3d5da59070081a82a3445`)
+            .send(blogToUpdate)
+            .expect(400)
+
+    })
+})
+
 afterAll(() => mongoose.connection.close())
