@@ -10,7 +10,7 @@ const baseUrl = '/api/users'
 beforeEach(async () => {
     await User.deleteMany({})
     const passwordHash = await bcrypt.hash('sekret', 10)
-    const user = new User({username: 'root', name: 'root root', passwordHash})
+    const user = new User({ username: 'root', name: 'root root', passwordHash })
     await user.save()
 })
 
@@ -20,9 +20,9 @@ describe('getting users', () => {
             .expect(200)
             .expect('Content-Type', /application\/json/)
 
-        const blohsInDb = await helper.usersInDb()
+        const blogsInDb = await helper.usersInDb()
 
-        expect(response.body).toHaveLength(blohsInDb.length)
+        expect(response.body).toHaveLength(blogsInDb.length)
     })
 })
 
@@ -100,7 +100,7 @@ describe('validation of adding users', () => {
             .expect(404)
             .expect('Content-Type', /application\/json/)
 
-        expect(result.body.error).toContain(`password is missing or length is less than 3`)
+        expect(result.body.error).toContain('password is missing or length is less than 3')
 
         const usersAfterAdding = await helper.usersInDb()
         expect(usersAfterAdding).toHaveLength(usersInDb.length)
