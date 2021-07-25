@@ -43,6 +43,28 @@ describe('when there is initially blogs saved', () => {
 })
 
 describe('addition of a new blog', () => {
+    let headers
+
+    beforeEach(async () => {
+        const newUser = {
+            username: 'janedoez',
+            name: 'Jane Z. Doe',
+            password: 'password',
+        }
+
+        await api
+            .post('/api/users')
+            .send(newUser)
+
+        const result = await api
+            .post('/api/login')
+            .send(newUser)
+
+        headers = {
+            'Authorization': `bearer ${result.body.token}`
+        }
+    })
+
     test('add valid blog', async () => {
         const newBlog = {
             title: 'New blog',
@@ -53,6 +75,7 @@ describe('addition of a new blog', () => {
 
         await api.post(baseUrl)
             .send(newBlog)
+            .set(headers)
             .expect(201)
             .expect('Content-Type', /application\/json/)
 
@@ -71,6 +94,7 @@ describe('addition of a new blog', () => {
 
         await api.post(baseUrl)
             .send(newBLog)
+            .set(headers)
             .expect(400)
 
         const blogs = await blogHelper.blogsInDb()
@@ -86,30 +110,48 @@ describe('addition of a new blog', () => {
 
         const response = await api.post(baseUrl)
             .send(newBLog)
+            .set(headers)
             .expect(201)
 
         expect(response.body.likes).toEqual(0)
     })
-})
 
-describe('deletion on the blog', () => {
-    test('succeeds with status 204 if id is valid', async () => {
-        const blogs = await blogHelper.blogsInDb()
-        const blogToDelete = blogs[0]
+    describe('deletion on the blog', () => {
+        let result
+        beforeEach(async () => {
+            const newBlog = {
+                title: 'Great developer experience',
+                author: 'Hector Ramos',
+                url: 'https://jestjs.io/blog/2017/01/30/a-great-developer-experience',
+                likes: 7
+            }
 
-        await api.delete(`${baseUrl}/${blogToDelete.id}`)
-            .expect(204)
-        const blogsAfterDelete = await blogHelper.blogsInDb()
+            result = await api
+                .post('/api/blogs')
+                .send(newBlog)
+                .set(headers)
+        })
 
-        expect(blogsAfterDelete).toHaveLength(blogHelper.initialBlogs.length - 1)
-    })
+        test('succeeds with status 204 if id is valid', async () => {
+            const blogs = await blogHelper.blogsInDb()
 
-    test('error with status 400 if id is not valid', async () => {
-        await api.delete(`${baseUrl}/5a3d5da59070081a82a3445`)
-            .expect(400)
-        const blogsAfterDelete = await blogHelper.blogsInDb()
+            await api.delete(`${baseUrl}/${result.body.id}`)
+                .expect(204)
+                .set(headers)
+            const blogsAfterDelete = await blogHelper.blogsInDb()
 
-        expect(blogsAfterDelete).toHaveLength(blogHelper.initialBlogs.length)
+            expect(blogsAfterDelete).toHaveLength(blogs.length - 1)
+        })
+
+        test('error with status 400 if id is not valid', async () => {
+            const blogs = await blogHelper.blogsInDb()
+            await api.delete(`${baseUrl}/5a3d5da59070081a82a3445`)
+                .expect(400)
+                .set(headers)
+            const blogsAfterDelete = await blogHelper.blogsInDb()
+
+            expect(blogsAfterDelete).toHaveLength(blogs.length)
+        })
     })
 })
 
