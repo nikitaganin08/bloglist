@@ -27,11 +27,12 @@ mongoose.connect(config.MONGODB_URI, {
 
 app.use(express.json())
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms'))
-app.use('/api/blogs', blogsRouter)
-app.use('/api/users', usersRouter)
 app.use('/api/login', loginRouter)
-app.use(cors())
+app.use('/api/users', usersRouter)
+app.use(middlerware.tokenExtractor)
+app.use('/api/blogs', blogsRouter)
 app.use(middlerware.errorHandler)
 app.use(middlerware.unknownEndpoint)
+app.use(cors())
 
 module.exports = app
