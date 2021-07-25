@@ -1,7 +1,6 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/Blog')
-const User = require('../models/User')
-const jwt = require('jsonwebtoken')
+const { userExtractor, tokenExtractor } = require('../utils/middleware')
 
 blogsRouter.get('/', async (request, response, next) => {
     try {
@@ -13,13 +12,10 @@ blogsRouter.get('/', async (request, response, next) => {
     }
 })
 
-blogsRouter.post('/', async (request, response, next) => {
+blogsRouter.post('/', tokenExtractor, userExtractor, async (request, response, next) => {
     const body = request.body
     try {
-        const decodedToken = jwt.verify(request.token, process.env.SECRET)
-
-        const user = await User.findById(decodedToken.id)
-
+        const user = request.user
 
         const blog = new Blog({
             title: body.title,
@@ -38,11 +34,11 @@ blogsRouter.post('/', async (request, response, next) => {
     }
 })
 
-blogsRouter.delete('/:id', async (request, response, next) => {
+blogsRouter.delete('/:id', tokenExtractor, userExtractor, async (request, response, next) => {
     try {
         const blog = await Blog.findById(request.params.id)
-        const userId = jwt.verify(request.token, process.env.SECRET)
-        if (blog.user.toString() !== userId.id) {
+        const user = request.user
+        if (blog.user.toString() !== user.id) {
             return response.status(403).send({ error: 'deletion forbidden' })
         }
 
