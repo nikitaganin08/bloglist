@@ -15,6 +15,7 @@ userRouter.get('/', async (request, response, next) => {
 userRouter.post('/', async (request, response, next) => {
     const body = request.body
 
+    console.log(body)
     if (!body.password || body.password.length < 3) {
         return response.status(404).json({
             error: 'password is missing or length is less than 3'
