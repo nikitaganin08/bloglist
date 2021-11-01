@@ -1,11 +1,14 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/Blog')
+// eslint-disable-next-line no-unused-vars
+const Comment = require('../models/Comment')
 const { userExtractor, tokenExtractor } = require('../utils/middleware')
 
 blogsRouter.get('/', async (request, response, next) => {
     try {
         const blogs = await Blog.find({})
             .populate('user', { username: 1, name: 1 })
+            .populate('comments', { comment: 1 })
         response.json(blogs)
     } catch (exception) {
         next(exception)
@@ -30,6 +33,26 @@ blogsRouter.post('/', tokenExtractor, userExtractor, async (request, response, n
         user.blogs = user.blogs.concat(savedBlog)
         await user.save()
         response.status(201).send(savedBlog.toJSON())
+    } catch (error) {
+        next(error)
+    }
+})
+
+blogsRouter.post('/:id/comments', async (request, response, next) => {
+    const body = request.body
+    try {
+        const blog = await Blog.findById(request.params.id)
+            .populate('comments', { comment: 1 })
+        const comment = new Comment({
+            blog: blog._id,
+            comment: body.comment
+        })
+        const savedComment = await (await comment.save())
+            .populate('blog')
+            .execPopulate()
+        blog.comments = blog.comments.concat(savedComment)
+        await blog.save()
+        response.json(blog)
     } catch (error) {
         next(error)
     }

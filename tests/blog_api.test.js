@@ -127,7 +127,7 @@ describe('addition of a new blog', () => {
             }
 
             result = await api
-                .post('/api/blogs')
+                .post(baseUrl)
                 .send(newBlog)
                 .set(headers)
         })
@@ -174,6 +174,22 @@ describe('updating of blog', () => {
             .send(blogToUpdate)
             .expect(400)
 
+    })
+})
+
+describe('commenting of blog', () => {
+    test('add comment on blog', async () => {
+        const blogs = await blogHelper.blogsInDb()
+        const blogToUpdate = blogs[0]
+        const comment = {
+            user: blogToUpdate.user,
+            comment: 'Test comment'
+        }
+
+        const response = await api.post(`${baseUrl}/${blogToUpdate.id}/comments`)
+            .send(comment)
+            .expect(200)
+        expect(response.body.comments).toHaveLength(1)
     })
 })
 
